@@ -1,0 +1,11 @@
+#examples svg,
+#examples canvas {
+  position: absolute;
+}
+
+.example-mesh {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2px;
+}
+

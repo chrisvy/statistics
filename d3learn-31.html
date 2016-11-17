@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>全链分析31</title>
+	<link rel="stylesheet" href="css/style.css"></link>
+</head>
+<body>
+	<div class="svgCard"></div>
+	<div id="dvCompute"></div>
+	<script type="text/javascript" src="js/d3.min.js"></script>
+	<script type="text/javascript" src="js/jquery.js"></script>
+	<script type="text/javascript">
+	$(function(){
+		//
+	});
+
+		//SVG
+		var children = {"ele1": ["ele2", "ele3", "ele4", "ele5"], "ele2": ["ele6"], "ele4": ["ele7"], "ele6": ["ele7", "ele8", "ele11", "ele12", "ele13"], "ele7": ["ele9"], "ele9": ["ele10"]};//mylines
+		var parents = {"ele1": ["elep2", "elep3", "elep4", "elep5"], "elep2": ["elep6"], "elep4": ["elep7"], "elep6": ["elep7", "elep8", "elep11", "elep12", "elep13"], "elep7": ["elep9"], "elep9": ["elep10"]};//mylines
+		var nodes = {"ele1":{"db": "db1", "dbName": "库1", "tabName": "表1"}, "ele2":{"db": "db2", "dbName": "库2", "tabName": "表2"}, "ele3":{"db": "db3", "dbName": "库3", "tabName": "表3"}, "ele4":{"db": "db3", "dbName": "库3", "tabName": "表4"}, "ele5":{"db": "db4", "dbName": "库4", "tabName": "表5"}, "ele6":{"db": "db5", "dbName": "库5", "tabName": "表6"}, "ele7":{"db": "db6", "dbName": "库6", "tabName": "表7"}, "ele8":{"db": "db7", "dbName": "库7", "tabName": "表8"}, "ele9":{"db": "db8", "dbName": "库8", "tabName": "表9"}, "ele10":{"db": "db9", "dbName": "库9", "tabName": "表10"}, "ele11":{"db": "db9", "dbName": "库9", "tabName": "表11"}, "ele12":{"db": "db9", "dbName": "库9", "tabName": "表12"}, "ele13":{"db": "db9", "dbName": "库9", "tabName": "表13"}, "elep2":{"db": "db2", "dbName": "库2", "tabName": "表2"}, "elep3":{"db": "db3", "dbName": "库3", "tabName": "表3"}, "elep4":{"db": "db3", "dbName": "库3", "tabName": "表4"}, "elep5":{"db": "db4", "dbName": "库4", "tabName": "表5"}, "elep6":{"db": "db5", "dbName": "库5", "tabName": "表6"}, "elep7":{"db": "db6", "dbName": "库6", "tabName": "表7"}, "elep8":{"db": "db7", "dbName": "库7", "tabName": "表8"}, "elep9":{"db": "db8", "dbName": "库8", "tabName": "表9"}, "elep10":{"db": "db9", "dbName": "库9", "tabName": "表10"}, "elep11":{"db": "db9", "dbName": "库9", "tabName": "表11"}, "elep12":{"db": "db9", "dbName": "库9", "tabName": "表12"}, "elep13":{"db": "db9", "dbName": "库9", "tabName": "表13"}};//mynodes
+
+		var resultc = {}, resultp = {}, header = "ele1", headerNode = [0, 0];
+		var linesNum = {}, linesNump = {};
+		var btnX = 20, btnY = 25;
+		var referenceX = 20, referenceY = 40;
+		var mx = referenceX, my = referenceY;
+		var offx = 185, offy = 45;
+		var rectX = 130, rectY = 25;
+		var vheight = 0;
+
+		var maxLayer =0, maxLayerp =0;//calculate the max
+		var newLines = {}, newLinesp = {};
+		//------------------
+		function genResult(lines, header, headerNode) {
+			var current = [], next = [];
+			current.push(header);//TODO
+			var x = 0, y = 0;
+			var genResult = {};
+			while (current.length) {
+				while (current.length) {
+					var theEle = current.shift();
+					genResult[theEle] = [x,y];
+					y++;
+					if (lines[theEle]) {
+						$.each(lines[theEle], function(index, item){
+							next.push(item);
+						});
+					}
+				}
+				current = next;
+				next = [];
+				x++;
+				y = 0;
+			}
+			return genResult;
+		}
+			
+		resultc = genResult(children, header, headerNode);
+		resultp = genResult(children, header, headerNode);
+		var maxLayer1stc = 0;
+		$.each(resultc, function(ele, loc) {
+			maxLayer1stc = Math.max(maxLayer1stc, loc[0]);
+		});
+		var maxLayer1stp = 0;
+		$.each(resultp, function(ele, loc) {
+			maxLayer1stp = Math.max(maxLayer1stp, loc[0]);
+		});
+		var cScale = d3.scale.linear()//[2384ff, 238499]
+		.domain([0, Math.max(maxLayer1stc, maxLayer1stp)])
+		.range([1, 0.5]);//2384e6//3bafda//40b6e1//92c9fd
+		//var layer = Math.floor(Math.random()*maxLayer1st)+1;
+		genSvg(nodes, true, 2, children, children, true, 2, parents, parents);
+		
+		//nth & flag <-> btn or layer
+		//inLines <-> newLines
+		//trueLines <-> children
+		function genSvg(nodes, flag, nth, inLines, trueLines, flagp, nthp, inLinesp, trueLinesp) {
+			$("svg").remove();
+			newLines = {};
+			newLinesp = {};
+			
+			//genResult(result, header, headerNode);
+			var genRes = genResult(inLines, header, headerNode);
+			var genResp = genResult(inLinesp, header, headerNode);
+
+			result = {};
+			if (flag) {
+				$.each(genRes, function(ele, location) {
+					if(location[0] <= nth) {
+						result[ele] = location;
+					}
+				});
+			} else {
+				result = genRes;
+			}
+			resultp = {};
+			if (flagp) {
+				$.each(genResp, function(ele, location) {
+					if(location[0] <= nthp) {
+						resultp[ele] = location;
+					}
+				});
+			} else {
+				resultp = genResp;
+			}
+
+			//genNodeObj();
+			var nodeObj = {}, nodeObjp = {};
+			maxLayer = 0, maxLayerp = 0;
+			function genNodeObj(result, maxLayer, nodeObj) {
+				$.each(result, function(ele, loc){
+					var arrInd = loc[0];//nth-row
+					maxLayer = Math.max(maxLayer, parseInt(arrInd));
+					if (!nodeObj[arrInd]) {//{"1" : {}}
+						nodeObj[arrInd] = {};
+					}
+					var theDb = nodes[ele]["db"];
+					if (!nodeObj[arrInd][theDb]) {//{"1" : {"db1": ["ele1", "ele2"]}}
+						nodeObj[arrInd][theDb] = [];
+					}
+					nodeObj[arrInd][theDb].push(ele);
+				});
+				return maxLayer;
+			}
+			maxLayer = genNodeObj(result, maxLayer, nodeObj);
+			maxLayerp = genNodeObj(resultp, maxLayerp, nodeObjp);
+
+			//genMatrix();
+			var matrixDb = {}, matrixDbp = {};
+			var matrix = {}, matrixp = {};
+			var vwidth = 185 * maxLayer + 150;
+			if (maxLayer < maxLayer1stc) {
+				vwidth += referenceX;
+			}
+			var vwidthp = 185 * maxLayerp + 150 - rectX;
+			if (maxLayerp < maxLayer1stp) {
+				vwidthp += referenceX;
+			}
+			function genMatrix(pc, nodeObj, vwidth, matrixDb, matrix, vheight) {
+				$.each(nodeObj, function(key, value){//{"1":{"db1", "db2"}, "2":{"db3", "db4"}}
+					var layer = parseInt(key);
+					matrixDb[key] = {};
+					if (pc) {
+						mx = vwidth - layer * offx;
+					} else {
+						mx = layer * offx + matrixp[header][0];
+					}
+					my = referenceY;
+					$.each(value, function(keyin, valuein){//{"db1":["tab1", "tab2"]}
+						matrixDb[key][keyin] = [mx, my];
+						$.each(valuein , function(index, item){
+							my += rectY;
+							matrix[item] = [mx, my];//{"tab1": [x, y]}
+							vheight = Math.max(vheight, my);
+						});
+						my += offy;
+					});
+				});
+				return vheight;
+			}
+			vheight = genMatrix(true, nodeObjp, vwidthp, matrixDbp, matrixp, vheight);
+			vheight = genMatrix(false, nodeObj, vwidth, matrixDb, matrix, vheight);
+
+			//genMatrixLines();
+			var matrixLines = {}, matrixLinesp = {};
+			function genMatrixLines(pc, inLines, result, matrix, matrixLines, newLines) {
+				$.each(inLines, function(ele, eleArr){//form ele
+					if (matrix[ele] !== undefined) {
+						$.each(eleArr, function(index, item){//to item
+							if (result[item] !== undefined) {
+								//TODO generate newLines
+								if (newLines[ele] === undefined) {
+									newLines[ele] = [];
+								}
+								newLines[ele].push(item);
+								var layer = result[item][0];
+								if (matrixLines[layer] === undefined) {
+									matrixLines[layer] = {};
+								}
+								if (matrixLines[layer][ele] === undefined) {
+									matrixLines[layer][ele] = [];
+								}
+								if (pc) {
+									matrixLines[layer][ele].push([matrix[item][0] + rectX, matrix[item][1] + rectY / 2, matrix[ele][0], matrix[ele][1] + rectY / 2]);
+								} else {
+									matrixLines[layer][ele].push([matrix[ele][0] + rectX, matrix[ele][1] + rectY / 2, matrix[item][0], matrix[item][1] + rectY / 2]);
+								}
+							}
+						});
+					}
+				});
+			}
+			genMatrixLines(true, inLinesp, resultp, matrixp, matrixLinesp, newLinesp);
+			genMatrixLines(false, inLines, result, matrix, matrixLines, newLines);
+
+			svg = d3.select(".svgCard")
+			.append("svg")
+			.attr("width", vwidth + vwidthp)
+			.attr("height", vheight + 20 + referenceY)
+			.style("background", "#f5f5f5");
+
+			//draw lines
+			linesNum = {};
+			function calLinesNum(matrixLines, linesNum) {
+				$.each(matrixLines, function(key, eles){//{"1":{"ele1":[[x1,y1,x2,y2],[x1,y1,x2,y2],[x1,y1,x2,y2],[x1,y1,x2,y2]]}}
+					$.each(eles, function(ele, coordinates){
+						$.each(coordinates, function(ind, coordinate){
+							drawLine(coordinate);
+							if (linesNum[ele] === undefined) {
+								linesNum[ele] = 1;
+							} else {
+								linesNum[ele]++;
+							}
+						})
+					});
+				});
+			}
+			calLinesNum(matrixLinesp, linesNump);
+			calLinesNum(matrixLines, linesNum);
+
+			//draw others
+			$.each(nodeObj, function(col, dbs){//{"1":{"db1", "db2"}, "2":{"db3", "db4"}}
+				var colNum = parseInt(col);
+				var colOpacity = cScale(colNum);
+				if (col == 0) {
+					var tmpColorNode = "#2384e6";
+					var tmpColorIcon = "#2384e6";
+				} else {
+					var tmpColorNode = "#3bafda";//"#3bafda"
+					var tmpColorIcon = "#3bafda";
+				}
+				$.each(dbs, function(db, tabs){//{"db1":["tab1", "tab2"]}
+					var dbName = nodes[tabs[0]]["dbName"];
+					drawNode(matrixDb[col][db], tmpColorNode, tmpColorNode, dbName, colOpacity);
+					drawText(matrixDb[col][db], 5, db, "#fff");
+					$.each(tabs, function(index, tab){
+						drawNode(matrix[tab], "#fff", "#dbdada", nodes[tab]["tabName"], colOpacity);
+						drawIcon(matrix[tab], tmpColorIcon);
+						drawText(matrix[tab], 20, tab, "#000");
+						if (trueLines[tab] && (!linesNum[tab] || (linesNum[tab] < trueLines[tab].length))) {//TODO
+							drawBtn(false, matrix[tab], tab, newLines, trueLines, newLinesp, trueLinesp);
+						}
+					});
+				});
+			});
+			$.each(nodeObjp, function(col, dbs){//{"1":{"db1", "db2"}, "2":{"db3", "db4"}}
+				var colNum = parseInt(col);
+				var colOpacity = cScale(colNum);
+				if (col == 0) {
+					var tmpColorNode = "#2384e6";
+					var tmpColorIcon = "#2384e6";
+				} else {
+					var tmpColorNode = "#3bafda";//"#3bafda"
+					var tmpColorIcon = "#3bafda";
+				}
+				$.each(dbs, function(db, tabs){//{"db1":["tab1", "tab2"]}
+					var dbName = nodes[tabs[0]]["dbName"];
+					drawNode(matrixDbp[col][db], tmpColorNode, tmpColorNode, dbName, colOpacity);
+					drawText(matrixDbp[col][db], 5, db, "#fff");
+					$.each(tabs, function(index, tab){
+						drawNode(matrixp[tab], "#fff", "#dbdada", nodes[tab]["tabName"], colOpacity);
+						drawIcon(matrixp[tab], tmpColorIcon);
+						drawText(matrixp[tab], 20, tab, "#000");
+						if (trueLinesp[tab] && (!linesNump[tab] || (linesNump[tab] < trueLinesp[tab].length))) {//TODO
+							drawBtn(true, matrixp[tab], tab, newLines, trueLines, newLinesp, trueLinesp);
+						}
+					});
+				});
+			});
+		}
+
+		function drawNode(node, color, stroke, tip, opacity) {
+			var rectangle = svg.append("rect")
+						.attr("x", node[0])
+						.attr("y", node[1])
+						.attr("width", rectX)
+						.attr("height", rectY)
+						.style("fill", color)
+						.style("stroke", stroke)
+						.style("opacity", opacity)
+						.on("mouseover", function(){
+							drawTip(node[0], node[1], tip);
+						})
+						.on("mouseout", function(){
+							d3.select(".svgTip").remove();
+						});
+		}
+
+		function drawLine(line) {
+			//arrow
+			var arrH = 12;
+			var arrh = arrH / 2;
+			var defs = svg.append("defs");  
+			var arrowMarker = defs.append("marker")  
+			                        .attr("id","arrow")  
+			                        .attr("markerUnits","strokeWidth")  
+			                        .attr("markerWidth",arrH)
+			                        .attr("markerHeight",arrH)
+			                        .attr("viewBox","0 0 " + arrH + " " + arrH)
+			                        .attr("refX",arrh)  
+			                        .attr("refY",arrh)  
+			                        .attr("orient","auto");    
+			var arrow_path = "M2,2 L10,6 L2,10 L2,2";                            
+			arrowMarker.append("path")  
+			            .attr("d",arrow_path)  
+		        		.attr("fill","#777");
+		    //line
+		    var line = svg.append("line")  
+		         .attr("x1", line[0])  
+		         .attr("y1", line[1])  
+		         .attr("x2", line[2])  
+		         .attr("y2", line[3])  
+		         .attr("stroke","#c5c6cb")  
+		         .attr("stroke-width",1)  
+		         .attr("marker-end","url(#arrow)");
+		}
+
+		function drawText(node, offsetX, text, color) {
+			svg.append("text")
+			.text(text)
+			.attr("x", node[0])
+			.attr("y", node[1])
+			.attr("dx", offsetX)
+			.attr("dy", rectY * 2 / 3)
+			.attr("font-family", "sans-serif")
+			.attr("font-size", "11px")
+			.attr("fill", color);
+		}
+
+		function drawIcon(node ,color) {
+			var x = node[0] + 5, y = node[1] + rectY / 3 ;
+			var icondatas = [
+					[x,y,x+12,y],
+					[x,y+1,x+12,y+1],
+					[x,y+4,x+12,y+4],
+					[x,y+7,x+12,y+7],
+					[x,y+10,x+12,y+10],
+					[x,y,x,y+10],
+					[x+4,y,x+4,y+10],
+					[x+8,y,x+8,y+10],
+					[x+12,y,x+12,y+10]
+					];
+			var theG = svg.append("g").classed("svgIcon", true);
+			$.each(icondatas, function(index, iconArr){
+				theG.append("line")
+				.attr("x1", iconArr[0])
+				.attr("y1", iconArr[1])
+				.attr("x2", iconArr[2])
+				.attr("y2", iconArr[3])
+				.attr("stroke", color)
+				.attr("stroke-width", "1px");
+			});
+		}
+		
+		var drawTip = function(x, y, word) {
+			var textOff = 5;
+			word = $.trim(word);
+			var $div = $("#dvCompute");
+			$div.text(word);
+			var twidth = $div[0].clientWidth;
+			var x2 = x + rectX / 2 - 1;
+			var x1 = x2 - 6;
+			var x3 = x2 + 6;
+			var x0 = x2 - twidth / 2 + 1 - textOff;
+			var x4 = x2 + twidth / 2 - 1 + textOff;
+			var y2 = y - 1;
+			var y1 = y - 10;
+			var y0 = y1 - rectY;
+			var theT = svg.append("g").classed("svgTip", true);
+			var tipPath = "M"+x0+","+y0+" L"+x4+","+y0+" L"+x4+","+y1+" L"+x3+","+y1+" L"+x2+","+y2+" L"+x1+","+y1+" L"+x0+","+y1+" L"+x0+","+y0;
+			theT.append("path")
+				.attr("d",tipPath)
+        		.attr("fill","#fff")
+        		.style("fill", "#5d5d5d");
+        	theT.append("text")
+			.text(word)
+			.attr("x", x0 + textOff)
+			.attr("y", y0)
+			.attr("dx", 0)//TODO
+			.attr("dy", rectY * 2 / 3)
+			.attr("font-family", "sans-serif")
+			.attr("font-size", "11px")
+			.attr("fill", "#fff");
+		};
+
+		function drawBtn(pc, node, tab, newlines, trueLines, newlinesp, trueLinesp) {
+			if (pc) {
+				var x = node[0] - btnX;
+				var y = node[1];
+				var theB = svg.append("g")
+					.classed("svgBtn", true)
+					.on("click", function() {
+						d3.select(this).remove();
+						var recordsp = {};
+						if (trueLinesp[tab]) {
+							if (newLinesp[tab] === undefined) {
+								newLinesp[tab] = trueLinesp[tab];
+							} else {
+								$.each(trueLinesp[tab], function(index, children) {
+									recordsp[children] = 1;
+								});
+								console.log("recordsp1:", recordsp);
+								$.each(newLinesp[tab], function(index, children) {
+									records[children] = 2;
+								});
+								console.log("recordsp2:", recordsp);
+								$.each(recordsp, function(ele, num) {
+									if (num == 1) {
+										newLinesp[tab].push(ele);
+									}
+								});
+							}
+						}
+						genSvg(nodes, false, maxLayer, newLines, children, false, maxLayerp, newLinesp, parents);
+					});
+			} else {
+				var x = node[0] + rectX;
+				var y = node[1];
+				var theB = svg.append("g")
+					.classed("svgBtn", true)
+					.on("click", function() {
+						d3.select(this).remove();
+						var records = {};
+						if (trueLines[tab]) {
+							if (newLines[tab] === undefined) {
+								newLines[tab] = trueLines[tab];
+							} else {
+								$.each(trueLines[tab], function(index, children) {
+									records[children] = 1;
+								});
+								console.log("records1:", records);
+								$.each(newLines[tab], function(index, children) {
+									records[children] = 2;
+								});
+								console.log("records2:", records);
+								$.each(records, function(ele, num) {
+									if (num == 1) {
+										newLines[tab].push(ele);
+									}
+								});
+							}
+						}
+						genSvg(nodes, false, maxLayer, newLines, children, false, maxLayerp, newLinesp, parents);
+					});
+			}
+
+			theB.append("rect")
+				.attr("x", x)
+				.attr("y", y)
+				.attr("width", btnX)
+				.attr("height", btnY)
+				.style("fill", "#dddcdc")
+				.style("stroke", "#dddcdc");
+			var btnDatas = [
+				[x+4, y+9, x+12, y+9],
+				[x+4, y+12, x+12, y+12],
+				[x+4, y+13, x+12, y+13],
+				[x+4, y+16, x+12, y+16]
+				];
+			var btnArea = [x+14, y+10, x+14, y+15, x+17, y+12];
+			var btnPath = "M"+btnArea[0]+","+btnArea[1]+" L"+btnArea[2]+","+btnArea[3]+" L"+btnArea[4]+","+btnArea[5]+" L"+btnArea[0]+","+btnArea[1];
+			$.each(btnDatas, function(index, btnArr){
+				theB.append("line")
+				.attr("x1", btnArr[0])
+				.attr("y1", btnArr[1])
+				.attr("x2", btnArr[2])
+				.attr("y2", btnArr[3])
+				.style("stroke", "#fff")
+				.attr("stroke-width", "1px");
+			});
+			theB.append("path")
+				.attr("d",btnPath)
+        		.attr("fill","#fff");
+		}
+
+		function calculateTemp(nodesTemp) {
+			genResult(resultTemp, header, headerNode);
+		}
+
+	</script>
+</body>
+</html>
